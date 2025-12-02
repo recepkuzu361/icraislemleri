@@ -58,7 +58,7 @@
         .fade-in { animation: fadeIn 0.8s cubic-bezier(0.19, 1, 0.22, 1) forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* SCROLLBAR GİZLEME (Önizleme alanı için temiz görünüm) */
+        /* SCROLLBAR GİZLEME */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
@@ -155,7 +155,6 @@
 
             <!-- Sağ Taraf: Sonuç Kartı -->
             <div class="lg:col-span-8">
-                <!-- Kesikli çizgiler kaldırıldı -->
                 <div id="emptyState" class="h-full min-h-[400px] flex flex-col items-center justify-center rounded-lg p-10 text-center bg-white/50 backdrop-blur shadow-sm">
                     <div class="w-20 h-20 bg-mono-50 rounded-full flex items-center justify-center mb-6 text-mono-300 animate-pulse"><i class="fa-solid fa-calculator text-3xl"></i></div>
                     <h3 class="text-xl font-serif font-bold text-mono-800">Hesaplama Bekleniyor</h3>
@@ -189,7 +188,6 @@
         </div>
 
         <!-- 2. BÖLÜM: RESMİ YAZI OLUŞTURUCU -->
-        <!-- items-start: Yükseklik eşitlemesini kapatır -->
         <div id="generatorControls" class="bg-white/95 backdrop-blur border-t-4 border-black shadow-lg print:hidden flex flex-col md:flex-row items-start">
             
             <!-- Sol Taraf: Form -->
@@ -257,12 +255,9 @@
             </div>
 
             <!-- Sağ Taraf: Önizleme -->
-            <!-- Boşluklar temizlendi: pt-8, bg-white -->
             <div class="w-full md:w-1/2 bg-white relative flex items-start justify-center pt-8 pb-8" id="previewWrapper">
-                <!-- A4 Kağıdı -->
-                <!-- Kesikli çizgiler kaldırıldı. height: auto ve min-height: A4 ratio. -->
                 <div id="previewContainer" class="bg-white shadow-2xl origin-top flex flex-col" style="width: 794px; min-height: 1123px; height: auto; flex-shrink: 0; transform-origin: top center;">
-                    <!-- Varsayılan Boş Durum: Kesikli çizgi kaldırıldı -->
+                    <!-- Varsayılan Boş Durum -->
                     <div class="flex items-center justify-center h-[1123px] w-full text-mono-200 font-bold uppercase tracking-widest text-2xl">
                         Önizleme Alanı
                     </div>
@@ -297,22 +292,17 @@
             const availableWidth = wrapper.offsetWidth;
             const a4Width = 794;
 
-            // Sadece genişliğe göre scale et
             const scale = (availableWidth - 40) / a4Width; // 40px margin
             const finalScale = Math.max(scale, 0.2);
 
             container.style.transform = `scale(${finalScale})`;
             
-            // Kapsayıcının yüksekliğini, scale edilmiş kağıdın yüksekliğine + üst boşluk (32px) + alt boşluk (32px) kadar eşitle
-            // scrollHeight kullanıyoruz ki kağıt uzarsa wrapper da uzasın
             wrapper.style.height = (container.offsetHeight * finalScale + 64) + 'px';
         }
 
-        // Event Listeners for Resize
         window.addEventListener('load', resizePreview);
         window.addEventListener('resize', resizePreview);
         
-        // İçerik değiştikçe boyutu güncelle
         const observer = new MutationObserver(resizePreview);
         observer.observe(document.getElementById('previewContainer'), { childList: true, subtree: true, attributes: true });
 
@@ -530,11 +520,9 @@
         function downloadWord() {
             const previewContainer = document.getElementById('previewContainer');
             
-            // Butonu geçici olarak gizle
             const btnDiv = previewContainer.querySelector('.no-print');
             if(btnDiv) btnDiv.style.display = 'none';
 
-            // HTML İçeriğini Al
             const htmlContent = `
                 <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
                 <head>
@@ -557,15 +545,12 @@
                 </html>
             `;
 
-            // Butonu geri getir
             if(btnDiv) btnDiv.style.display = 'block'; 
 
-            // Blob oluştur
             const blob = new Blob(['\ufeff', htmlContent], {
                 type: 'application/msword'
             });
 
-            // İndirme linki oluştur
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
