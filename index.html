@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Egger İcra İşlemleri</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        mono: {
+                            50: '#F9FAFB',
+                            100: '#F3F4F6',
+                            200: '#E5E7EB',
+                            300: '#D1D5DB',
+                            400: '#9CA3AF',
+                            500: '#6B7280',
+                            800: '#1F2937',
+                            900: '#111827',
+                            black: '#000000'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
+                        'sharp': '4px 4px 0px 0px rgba(0,0,0,1)',
+                    },
+                    screens: {
+                        'print': {'raw': 'print'},
+                    },
+                    transitionTimingFunction: {
+                        'out-expo': 'cubic-bezier(0.19, 1, 0.22, 1)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #f3f0eb;
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.8)),
+                url('https://images.unsplash.com/photo-1543423717-380d38e3e46c?q=80&w=2068&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
+        }
+        
+        .fade-in { animation: fadeIn 0.8s cubic-bezier(0.19, 1, 0.22, 1) forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* SCROLLBAR GİZLEME (Önizleme alanı için temiz görünüm) */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* YAZDIRMA AYARLARI */
+        @media print {
+            @page { size: A4; margin: 0; }
+            body { background-image: none !important; background-color: white !important; margin: 0; }
+            body * { visibility: hidden; }
+            #printArea, #printArea * { visibility: visible !important; }
+            #printArea {
+                display: block !important;
+                position: absolute;
+                left: 0; top: 0; width: 210mm; height: 297mm;
+                margin: 0; padding: 0; background: white; border: none; z-index: 9999;
+            }
+            header, footer, #mainGrid, #generatorControls { display: none !important; }
+        }
+    </style>
+</head>
+<body class="min-h-screen text-mono-900 flex flex-col font-sans selection:bg-black selection:text-white">
+
+    <!-- Header -->
+    <header class="bg-white/90 backdrop-blur-sm border-b border-mono-200 sticky top-0 z-50 print:hidden">
+        <div class="container mx-auto px-6 py-5">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-6">
+                    <div class="flex flex-col">
+                        <span class="text-4xl font-serif font-bold italic tracking-tight text-black leading-none" style="letter-spacing: -1px;">EGGER</span>
+                        <span class="text-mono-400 text-[10px] tracking-[0.2em] uppercase font-serif mt-1">
+                            <span class="font-extrabold text-black">MORE</span> <span class="font-semibold text-mono-600">FROM</span> <span class="font-normal text-mono-400">WOOD.</span>
+                        </span>
+                    </div>
+                    <div class="h-12 w-px bg-mono-300 hidden md:block"></div>
+                    <div>
+                        <h1 class="text-2xl font-serif font-bold text-black tracking-wide uppercase">İCRA İŞLEMLERİ</h1>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8 flex-grow">
+        
+        <!-- 1. BÖLÜM: HESAPLAMA -->
+        <div id="mainGrid" class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start mb-8 print:hidden">
+            <!-- Sol Taraf: Giriş Formu -->
+            <div class="lg:col-span-4">
+                <div class="bg-white/95 backdrop-blur p-8 border border-mono-200 shadow-soft sticky top-24">
+                    <h2 class="text-xl font-serif font-bold mb-6 border-b border-black pb-4">Hesaplama Parametreleri</h2>
+                    <form id="calcForm" onsubmit="event.preventDefault(); calculate();" class="space-y-8">
+                        <div class="group">
+                            <label class="block text-xs font-bold text-mono-500 mb-2 uppercase tracking-widest group-focus-within:text-black">Saatlik Ücret</label>
+                            <div class="relative">
+                                <span class="absolute left-0 top-2 text-mono-400 font-serif text-lg">₺</span>
+                                <input type="number" id="hourlyRate" step="0.01" min="0" required class="w-full pl-6 pr-0 py-2 bg-transparent border-b border-mono-300 focus:border-black outline-none font-serif text-xl placeholder-mono-200 text-black">
+                            </div>
+                        </div>
+                        <div class="group">
+                            <label class="block text-xs font-bold text-mono-500 mb-2 uppercase tracking-widest group-focus-within:text-black">Kıdem Yılı</label>
+                            <input type="number" id="seniority" min="0" max="50" required class="w-full px-0 py-2 bg-transparent border-b border-mono-300 focus:border-black outline-none font-serif text-xl placeholder-mono-200 text-black">
+                        </div>
+                        <div class="pt-2">
+                            <label class="block text-xs font-bold text-mono-500 mb-4 uppercase tracking-widest">Hesaplama Yöntemi</label>
+                            <div class="space-y-3">
+                                <label class="group relative flex items-center p-5 border border-mono-200 cursor-pointer hover:border-black transition-all has-[:checked]:border-black has-[:checked]:bg-white">
+                                    <input type="radio" name="method" value="1" checked class="peer sr-only">
+                                    <div class="w-5 h-5 border border-mono-300 rounded-full flex items-center justify-center peer-checked:border-black">
+                                        <div class="w-2.5 h-2.5 bg-black rounded-full scale-0 transition-transform group-has-[:checked]:scale-100"></div>
+                                    </div>
+                                    <span class="ml-4 text-sm font-bold text-mono-600 peer-checked:text-black">Toplam Gelirin 1/4'ü</span>
+                                </label>
+                                <label class="group relative flex items-center p-5 border border-mono-200 cursor-pointer hover:border-black transition-all has-[:checked]:border-black has-[:checked]:bg-white">
+                                    <input type="radio" name="method" value="2" class="peer sr-only">
+                                    <div class="w-5 h-5 border border-mono-300 rounded-full flex items-center justify-center peer-checked:border-black">
+                                        <div class="w-2.5 h-2.5 bg-black rounded-full scale-0 transition-transform group-has-[:checked]:scale-100"></div>
+                                    </div>
+                                    <span class="ml-4 text-sm font-bold text-mono-600 peer-checked:text-black">Maaş 1/4 + Yan Haklar</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="flex gap-4 mt-8">
+                            <button type="submit" class="relative w-2/3 overflow-hidden group bg-black text-white py-5 px-6 shadow-md hover:shadow-2xl hover:-translate-y-1 border border-black transition-all">
+                                <div class="absolute inset-0 w-0 bg-white transition-all duration-[400ms] group-hover:w-full"></div>
+                                <span class="relative z-10 flex items-center justify-center gap-3 group-hover:text-black font-serif font-bold tracking-[0.2em] text-sm">HESAPLA <i class="fa-solid fa-arrow-right"></i></span>
+                            </button>
+                            <button type="button" onclick="clearForm()" class="relative w-1/3 overflow-hidden group bg-black text-white border border-black py-5 px-4 shadow-md hover:shadow-2xl hover:-translate-y-1 transition-all">
+                                <div class="absolute inset-0 w-0 bg-white transition-all duration-[400ms] group-hover:w-full"></div>
+                                <span class="relative z-10 flex items-center justify-center gap-2 font-serif font-bold tracking-[0.1em] text-sm group-hover:text-black"><i class="fa-solid fa-trash-can"></i> TEMİZLE</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Sağ Taraf: Sonuç Kartı -->
+            <div class="lg:col-span-8">
+                <!-- Kesikli çizgiler kaldırıldı -->
+                <div id="emptyState" class="h-full min-h-[400px] flex flex-col items-center justify-center rounded-lg p-10 text-center bg-white/50 backdrop-blur shadow-sm">
+                    <div class="w-20 h-20 bg-mono-50 rounded-full flex items-center justify-center mb-6 text-mono-300 animate-pulse"><i class="fa-solid fa-calculator text-3xl"></i></div>
+                    <h3 class="text-xl font-serif font-bold text-mono-800">Hesaplama Bekleniyor</h3>
+                </div>
+                <div id="resultCard" class="hidden bg-white/95 backdrop-blur border border-mono-200 shadow-soft">
+                    <div class="flex justify-between items-center p-6 border-b border-mono-100 bg-mono-50/50">
+                        <div class="flex items-center gap-4">
+                            <div class="w-1.5 h-10 bg-black"></div>
+                            <div><h2 class="text-2xl font-serif font-bold text-black tracking-tight">Hesap Dökümü</h2></div>
+                        </div>
+                    </div>
+                    <div class="flex flex-col md:flex-row">
+                        <div class="w-full md:w-3/5 p-8 border-r border-mono-100">
+                            <div class="grid grid-cols-2 text-[10px] uppercase font-bold text-mono-400 tracking-widest mb-6 border-b border-mono-200 pb-2"><span>Gelir Kalemi</span><span class="text-right">Tutar</span></div>
+                            <div class="py-5 border-b border-mono-100"><div class="flex justify-between items-end"><div><span class="block text-sm font-bold text-mono-800">Baz Maaş</span><span class="block text-[11px] text-mono-400 mt-1 font-mono" id="formulaBase">-</span></div><span class="text-lg font-serif text-black" id="resBaseSalary">0,00 ₺</span></div></div>
+                            <div class="py-5 border-b border-mono-100"><div class="flex justify-between items-end"><div><span class="block text-sm font-bold text-mono-800">İkramiye</span><span class="block text-[11px] text-mono-400 mt-1 font-mono" id="formulaBonus">-</span></div><span class="text-lg font-serif text-black" id="resBonus">0,00 ₺</span></div></div>
+                            <div class="py-5 border-b-2 border-black"><div class="flex justify-between items-end"><div><span class="block text-sm font-bold text-mono-800">Yakacak Yardımı</span></div><span class="text-lg font-serif text-black" id="resFuel">1.710,00 ₺</span></div></div>
+                            <div class="pt-6 flex justify-between items-center"><span class="text-xs font-bold uppercase text-mono-500">Toplam Brüt</span><span class="text-xl font-serif font-bold text-black" id="resTotalIncome">0,00 ₺</span></div>
+                        </div>
+                        <div class="w-full md:w-2/5 p-8 bg-mono-50/50 flex flex-col justify-center relative overflow-hidden">
+                            <div class="relative z-10">
+                                <h4 class="text-xs font-bold text-mono-500 uppercase tracking-widest mb-2">Kesilecek İcra Tutarı</h4>
+                                <div class="text-5xl font-serif font-black text-black tracking-tighter mb-6" id="resGarnishment">0,00 ₺</div>
+                                <div class="inline-flex items-center gap-2 bg-black text-white text-[10px] font-bold px-4 py-1.5 uppercase tracking-wider mb-10 shadow-lg" id="resMethodBadge"><span>-</span></div>
+                                <div class="border-t border-mono-300 pt-6"><div class="flex justify-between items-center"><span class="text-xs font-bold text-mono-600 uppercase">Ele Geçen</span><span class="text-2xl font-serif font-bold text-mono-900" id="resNet">0,00 ₺</span></div></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. BÖLÜM: RESMİ YAZI OLUŞTURUCU -->
+        <!-- items-start: Yükseklik eşitlemesini kapatır -->
+        <div id="generatorControls" class="bg-white/95 backdrop-blur border-t-4 border-black shadow-lg print:hidden flex flex-col md:flex-row items-start">
+            
+            <!-- Sol Taraf: Form -->
+            <div class="w-full md:w-1/2 p-8 flex flex-col bg-white" id="formColumn">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="bg-black text-white w-10 h-10 flex items-center justify-center font-bold text-lg">2</div>
+                    <h2 class="text-2xl font-serif font-bold text-black">Resmi Yazı / Dosyalama Oluşturucu</h2>
+                </div>
+
+                <div class="space-y-6">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="group">
+                            <label class="block text-xs font-bold text-mono-500 mb-2 uppercase tracking-widest">Çalışan Adı Soyadı</label>
+                            <input type="text" id="empName" class="w-full border-b border-mono-300 py-2 focus:border-black outline-none font-serif text-lg" placeholder="Ad Soyad">
+                        </div>
+                        <div class="group">
+                            <label class="block text-xs font-bold text-mono-500 mb-2 uppercase tracking-widest">TC Kimlik No</label>
+                            <input type="text" id="empTC" maxlength="11" class="w-full border-b border-mono-300 py-2 focus:border-black outline-none font-serif text-lg" placeholder="11 Haneli No">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="group">
+                            <label class="block text-xs font-bold text-mono-500 mb-2 uppercase tracking-widest">İcra Dairesi</label>
+                            <input type="text" id="icraOffice" class="w-full border-b border-mono-300 py-2 focus:border-black outline-none font-serif text-lg" placeholder="Örn: İstanbul 14. İcra">
+                        </div>
+                        <div class="group">
+                            <label class="block text-xs font-bold text-mono-500 mb-2 uppercase tracking-widest">Dosya No</label>
+                            <input type="text" id="fileNo" class="w-full border-b border-mono-300 py-2 focus:border-black outline-none font-serif text-lg" placeholder="2025/1234">
+                        </div>
+                    </div>
+
+                    <div class="group">
+                        <label class="block text-xs font-bold text-mono-500 mb-4 uppercase tracking-widest">Dosyalama Türü</label>
+                        <select id="docType" onchange="toggleQueueInputs()" class="w-full bg-mono-50 border border-mono-200 py-3 px-4 outline-none focus:border-black font-serif text-black appearance-none cursor-pointer">
+                            <option value="payment">1. Ödeme Başlangıcı (Bu ay kesilecek)</option>
+                            <option value="queue">2. Sıraya Alma (Mevcut dosyalar var)</option>
+                            <option value="left">3. İşten Ayrılış (Dosya İadesi)</option>
+                        </select>
+                    </div>
+
+                    <div id="queueInputs" class="hidden bg-mono-50/80 p-6 border border-mono-200">
+                        <h4 class="text-sm font-bold text-black uppercase mb-4 border-b border-mono-300 pb-2">Öndeki Dosya Bilgileri</h4>
+                        <div class="grid grid-cols-3 gap-2 mb-4">
+                            <input type="text" id="qOffice" placeholder="İcra Dairesi" class="border p-2 text-sm bg-white">
+                            <input type="text" id="qFile" placeholder="Dosya No" class="border p-2 text-sm bg-white">
+                            <input type="text" id="qAmount" placeholder="Tutar" class="border p-2 text-sm bg-white">
+                        </div>
+                        <button type="button" onclick="addQueueItem()" class="relative overflow-hidden group bg-black text-white py-3 px-6 shadow-md hover:shadow-xl hover:-translate-y-1 border border-black transition-all w-full">
+                            <div class="absolute inset-0 w-0 bg-white transition-all duration-[400ms] group-hover:w-full"></div>
+                            <span class="relative z-10 flex items-center justify-center gap-2 group-hover:text-black font-serif font-bold tracking-[0.2em] text-xs">
+                                LİSTEYE EKLE <i class="fa-solid fa-plus"></i>
+                            </span>
+                        </button>
+                        <ul id="queueList" class="mt-4 space-y-2 text-xs font-mono"></ul>
+                    </div>
+                </div>
+
+                <button type="button" onclick="generateLetter()" class="w-full relative overflow-hidden group bg-black text-white py-5 px-4 shadow-lg hover:shadow-2xl hover:-translate-y-1 border border-black transition-all mt-8">
+                    <div class="absolute inset-0 w-0 bg-white transition-all duration-[400ms] group-hover:w-full"></div>
+                    <span class="relative z-10 flex items-center justify-center gap-2 group-hover:text-black font-serif font-bold tracking-[0.1em] text-sm">
+                        YAZIYI OLUŞTUR <i class="fa-solid fa-file-pen"></i>
+                    </span>
+                </button>
+            </div>
+
+            <!-- Sağ Taraf: Önizleme -->
+            <!-- Boşluklar temizlendi: pt-8, bg-white -->
+            <div class="w-full md:w-1/2 bg-white relative flex items-start justify-center pt-8 pb-8" id="previewWrapper">
+                <!-- A4 Kağıdı -->
+                <!-- Kesikli çizgiler kaldırıldı. height: auto ve min-height: A4 ratio. -->
+                <div id="previewContainer" class="bg-white shadow-2xl origin-top flex flex-col" style="width: 794px; min-height: 1123px; height: auto; flex-shrink: 0; transform-origin: top center;">
+                    <!-- Varsayılan Boş Durum: Kesikli çizgi kaldırıldı -->
+                    <div class="flex items-center justify-center h-[1123px] w-full text-mono-200 font-bold uppercase tracking-widest text-2xl">
+                        Önizleme Alanı
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- YAZDIRILACAK ALAN -->
+        <div id="printArea" class="bg-white hidden p-12"></div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-mono-200 bg-white/90 backdrop-blur-sm py-8 mt-auto print:hidden">
+        <div class="container mx-auto px-4 text-center">
+            <span class="font-serif font-bold italic tracking-tight text-lg">EGGER</span>
+            <p class="text-mono-400 text-[10px] font-medium tracking-[0.2em] uppercase">Kurumsal İK Çözümleri | Recep Kuzu</p>
+        </div>
+    </footer>
+
+    <!-- Logic Script -->
+    <script>
+        let queueItems = [];
+
+        // ÖNİZLEME BOYUTLANDIRMA (AUTO FIT)
+        function resizePreview() {
+            const wrapper = document.getElementById('previewWrapper');
+            const container = document.getElementById('previewContainer');
+            
+            if (!wrapper || !container) return;
+
+            const availableWidth = wrapper.offsetWidth;
+            const a4Width = 794;
+
+            // Sadece genişliğe göre scale et
+            const scale = (availableWidth - 40) / a4Width; // 40px margin
+            const finalScale = Math.max(scale, 0.2);
+
+            container.style.transform = `scale(${finalScale})`;
+            
+            // Kapsayıcının yüksekliğini, scale edilmiş kağıdın yüksekliğine + üst boşluk (32px) + alt boşluk (32px) kadar eşitle
+            // scrollHeight kullanıyoruz ki kağıt uzarsa wrapper da uzasın
+            wrapper.style.height = (container.offsetHeight * finalScale + 64) + 'px';
+        }
+
+        // Event Listeners for Resize
+        window.addEventListener('load', resizePreview);
+        window.addEventListener('resize', resizePreview);
+        
+        // İçerik değiştikçe boyutu güncelle
+        const observer = new MutationObserver(resizePreview);
+        observer.observe(document.getElementById('previewContainer'), { childList: true, subtree: true, attributes: true });
+
+
+        // Hesaplama Fonksiyonu
+        function calculate() {
+            const hourlyRate = parseFloat(document.getElementById('hourlyRate').value);
+            let seniority = parseInt(document.getElementById('seniority').value);
+            const method = document.querySelector('input[name="method"]:checked').value;
+
+            if (isNaN(hourlyRate) || isNaN(seniority)) return;
+
+            const baseSalary = hourlyRate * 225;
+            const calcYear = seniority > 11 ? 11 : seniority;
+            const bonusDays = 70 + (calcYear * 4);
+            const bonusAmount = (bonusDays * hourlyRate * 7.5) / 12;
+            const fuelAid = 1710;
+            const totalBenefits = bonusAmount + fuelAid;
+            const totalIncome = baseSalary + totalBenefits;
+
+            let garnishmentAmount = 0;
+            let methodText = "";
+
+            if (method === "1") {
+                garnishmentAmount = totalIncome / 4;
+                methodText = "TOPLAM GELİRİN 1/4'Ü";
+            } else {
+                garnishmentAmount = (baseSalary / 4) + totalBenefits;
+                methodText = "MAAŞ 1/4 + YAN HAKLAR";
+            }
+
+            const netResult = totalIncome - garnishmentAmount;
+
+            const fmt = (n) => new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n) + ' ₺';
+            const fmtNum = (n) => new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+
+            document.getElementById('resBaseSalary').innerText = fmt(baseSalary);
+            document.getElementById('formulaBase').innerText = `(225 saat x ${fmtNum(hourlyRate)} ₺)`;
+            document.getElementById('resBonus').innerText = fmt(bonusAmount);
+            document.getElementById('formulaBonus').innerText = `(${bonusDays} gün x ${fmtNum(hourlyRate)} ₺ x 7.5 / 12)`;
+            document.getElementById('resFuel').innerText = fmt(fuelAid);
+            document.getElementById('resTotalIncome').innerText = fmt(totalIncome);
+            document.getElementById('resGarnishment').innerText = fmt(garnishmentAmount);
+            document.getElementById('resMethodBadge').innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span><span>${methodText}</span>`;
+            document.getElementById('resNet').innerText = fmt(netResult);
+
+            document.getElementById('emptyState').classList.add('hidden');
+            const resultCard = document.getElementById('resultCard');
+            resultCard.classList.remove('hidden');
+            resultCard.classList.add('fade-in');
+        };
+
+        function clearForm() {
+            document.getElementById('hourlyRate').value = '';
+            document.getElementById('seniority').value = '';
+            document.getElementById('emptyState').classList.remove('hidden');
+            document.getElementById('resultCard').classList.add('hidden');
+        };
+
+        function toggleQueueInputs() {
+            const type = document.getElementById('docType').value;
+            const queueDiv = document.getElementById('queueInputs');
+            if(type === 'queue') {
+                queueDiv.classList.remove('hidden');
+            } else {
+                queueDiv.classList.add('hidden');
+            }
+            setTimeout(resizePreview, 50);
+        };
+
+        function addQueueItem() {
+            const office = document.getElementById('qOffice').value;
+            const file = document.getElementById('qFile').value;
+            const amount = document.getElementById('qAmount').value;
+
+            if(!office || !file) return;
+
+            queueItems.push({ office, file, amount });
+            renderQueueList();
+            
+            document.getElementById('qOffice').value = '';
+            document.getElementById('qFile').value = '';
+            document.getElementById('qAmount').value = '';
+            document.getElementById('qOffice').focus();
+            
+            setTimeout(resizePreview, 50);
+        };
+
+        function renderQueueList() {
+            const list = document.getElementById('queueList');
+            list.innerHTML = queueItems.map((item, index) => 
+                `<li class="flex justify-between border-b pb-1">
+                    <span>${index+1}. ${item.office} (${item.file})</span>
+                    <span class="font-bold">${item.amount}</span>
+                 </li>`
+            ).join('');
+        };
+
+        function generateLetter() {
+            const name = document.getElementById('empName').value || "[AD SOYAD]";
+            const tc = document.getElementById('empTC').value || "[TC NO]";
+            const office = document.getElementById('icraOffice').value || "[İCRA DAİRESİ]";
+            const fileNo = document.getElementById('fileNo').value || "[DOSYA NO]";
+            const type = document.getElementById('docType').value;
+            
+            const currentGarnishment = document.getElementById('resGarnishment').innerText;
+            const isCalculated = currentGarnishment !== "0,00 ₺";
+
+            let bodyContent = "";
+            
+            if (type === 'payment') {
+                bodyContent = `
+                    <p class="mb-4">İlgide kayıtlı dosyanız borçlusu, şirketimiz personeli <strong>${name}</strong>'in (${tc}) almakta olduğu maaşının 1/4'ü ve diğer hak edişlerinin tamamı kesilerek, yasal kesinti oranları dahilinde daireniz dosyasına ödenecektir.</p>
+                    <p>Maaş haczi kesintilerine başlanmış olup, ilk ödeme bu ayki bordro döneminde gerçekleştirilecektir.</p>
+                    
+                    <p class="mt-6 mb-2 font-bold">Kesinti Bilgisi:</p>
+                    <table class="w-full border-collapse border border-gray-400 text-sm mb-6">
+                        <thead>
+                            <tr class="bg-gray-100">
+                                <th class="border p-2 w-10 text-center">#</th>
+                                <th class="border p-2 text-left">İcra Dairesi</th>
+                                <th class="border p-2 text-left">Dosya No</th>
+                                <th class="border p-2 text-right">Kesinti Tutarı</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="border p-2 text-center">1</td>
+                                <td class="border p-2">${office}</td>
+                                <td class="border p-2">${fileNo}</td>
+                                <td class="border p-2 text-right font-bold">${isCalculated ? currentGarnishment : '[Hesaplama Yapılmadı]'}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p class="mt-4">Bilgilerinize arz ederiz.</p>
+                `;
+            } else if (type === 'queue') {
+                let tableRows = queueItems.map((item, idx) => 
+                    `<tr>
+                        <td class="border p-2 text-center text-mono-500">${idx + 1}</td>
+                        <td class="border p-2">${item.office}</td>
+                        <td class="border p-2">${item.file}</td>
+                        <td class="border p-2 text-right">${item.amount}</td>
+                     </tr>`
+                ).join('');
+
+                const currentIndex = queueItems.length + 1;
+                const currentRow = `
+                    <tr class="bg-gray-50">
+                        <td class="border p-2 text-center text-mono-500">${currentIndex}</td>
+                        <td class="border p-2">${office}</td>
+                        <td class="border p-2">${fileNo}</td>
+                        <td class="border p-2 text-right">${isCalculated ? currentGarnishment : '[Hesaplanmadı]'}</td>
+                    </tr>
+                `;
+                
+                if(queueItems.length === 0) tableRows = ``;
+                tableRows += currentRow;
+
+                bodyContent = `
+                    <p class="mb-4">İlgide kayıtlı dosyanız incelenmiş olup, borçlu personelimiz <strong>${name}</strong>'in (${tc}) maaşı üzerinde daha önceden gelen haciz dosyaları bulunmaktadır.</p>
+                    <p>Yasal mevzuat gereği dosyanız sıraya alınmış olup, öncelikli dosyaların infazının ardından kesinti işlemleri başlayacaktır.</p>
+                    <p class="mt-6 mb-2 font-bold">İcra Dosya Sıralaması:</p>
+                    <table class="w-full border-collapse border border-gray-400 text-sm mb-6">
+                        <thead>
+                            <tr class="bg-gray-200">
+                                <th class="border p-2 w-10">#</th>
+                                <th class="border p-2 text-left">İcra Dairesi</th>
+                                <th class="border p-2 text-left">Dosya No</th>
+                                <th class="border p-2 text-right">Tutar / Durum</th>
+                            </tr>
+                        </thead>
+                        <tbody>${tableRows}</tbody>
+                    </table>
+                    <p class="mt-4">Bilgilerinize arz ederiz.</p>
+                `;
+            } else if (type === 'left') {
+                bodyContent = `
+                    <p class="mb-4">İlgide kayıtlı dosyanız borçlusu <strong>${name}</strong> (${tc}), şirketimizden ayrılmış olup, herhangi bir hak ve alacağı kalmamıştır.</p>
+                    <p>Personelin işten ayrılışı nedeniyle maaş haczi işleminin yapılamayacağını ve dosyanın işlemden kaldırılmasını bilgilerinize arz ederiz.</p>
+                `;
+            }
+            renderTemplate(office, fileNo, bodyContent);
+        };
+
+        function renderTemplate(office, fileNo, contentHtml) {
+            const today = new Date().toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            
+            const template = `
+                <div class="letter-content font-serif text-black leading-relaxed relative flex flex-col h-full bg-white p-12" style="padding-top: 8cm;">
+                    <div class="text-right mb-8 font-sans text-sm">${today}</div>
+                    <div class="font-bold mb-4">
+                        <div class="text-base">T.C.</div>
+                        <div class="text-base">${office} MÜDÜRLÜĞÜ'NE</div>
+                        <div class="mt-2 text-base">DOSYA NO: <span class="font-normal">${fileNo}</span></div>
+                    </div>
+                    <div class="text-justify mb-8 text-sm md:text-base flex-grow">
+                        ${contentHtml}
+                    </div>
+                    
+                    <div class="mt-auto flex justify-end pt-8 no-print">
+                         <button onclick="downloadWord()" class="relative overflow-hidden group bg-black text-white py-3 px-6 shadow-md transition-all duration-300 ease-out-expo hover:shadow-2xl hover:-translate-y-1 border border-black rounded-none">
+                            <div class="absolute inset-0 w-0 bg-white transition-all duration-[400ms] ease-out-expo group-hover:w-full"></div>
+                            <span class="relative z-10 flex items-center justify-center gap-2 transition-colors duration-300 group-hover:text-black font-serif font-bold tracking-[0.2em] text-sm">
+                                WORD İNDİR <i class="fa-solid fa-file-word"></i>
+                            </span>
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.getElementById('previewContainer').innerHTML = template;
+        }
+
+        // Word İndirme Fonksiyonu
+        function downloadWord() {
+            const previewContainer = document.getElementById('previewContainer');
+            
+            // Butonu geçici olarak gizle
+            const btnDiv = previewContainer.querySelector('.no-print');
+            if(btnDiv) btnDiv.style.display = 'none';
+
+            // HTML İçeriğini Al
+            const htmlContent = `
+                <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                <head>
+                    <meta charset='utf-8'>
+                    <title>İcra Yazısı</title>
+                    <style>
+                        body { font-family: 'Times New Roman', serif; font-size: 12pt; }
+                        table { border-collapse: collapse; width: 100%; }
+                        td, th { border: 1px solid black; padding: 5px; }
+                        .text-right { text-align: right; }
+                        .text-center { text-align: center; }
+                        .font-bold { font-weight: bold; }
+                        .mb-4 { margin-bottom: 15px; }
+                        .mt-4 { margin-top: 15px; }
+                    </style>
+                </head>
+                <body>
+                    ${previewContainer.innerHTML}
+                </body>
+                </html>
+            `;
+
+            // Butonu geri getir
+            if(btnDiv) btnDiv.style.display = 'block'; 
+
+            // Blob oluştur
+            const blob = new Blob(['\ufeff', htmlContent], {
+                type: 'application/msword'
+            });
+
+            // İndirme linki oluştur
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'icra_yazisi.doc';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>
