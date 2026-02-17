@@ -155,6 +155,7 @@
 
             <!-- Sağ Taraf: Sonuç Kartı -->
             <div class="lg:col-span-8">
+                <!-- Kesikli çizgiler kaldırıldı -->
                 <div id="emptyState" class="h-full min-h-[400px] flex flex-col items-center justify-center rounded-lg p-10 text-center bg-white/50 backdrop-blur shadow-sm">
                     <div class="w-20 h-20 bg-mono-50 rounded-full flex items-center justify-center mb-6 text-mono-300 animate-pulse"><i class="fa-solid fa-calculator text-3xl"></i></div>
                     <h3 class="text-xl font-serif font-bold text-mono-800">Hesaplama Bekleniyor</h3>
@@ -171,7 +172,7 @@
                             <div class="grid grid-cols-2 text-[10px] uppercase font-bold text-mono-400 tracking-widest mb-6 border-b border-mono-200 pb-2"><span>Gelir Kalemi</span><span class="text-right">Tutar</span></div>
                             <div class="py-5 border-b border-mono-100"><div class="flex justify-between items-end"><div><span class="block text-sm font-bold text-mono-800">Baz Maaş</span><span class="block text-[11px] text-mono-400 mt-1 font-mono" id="formulaBase">-</span></div><span class="text-lg font-serif text-black" id="resBaseSalary">0,00 ₺</span></div></div>
                             <div class="py-5 border-b border-mono-100"><div class="flex justify-between items-end"><div><span class="block text-sm font-bold text-mono-800">İkramiye</span><span class="block text-[11px] text-mono-400 mt-1 font-mono" id="formulaBonus">-</span></div><span class="text-lg font-serif text-black" id="resBonus">0,00 ₺</span></div></div>
-                            <div class="py-5 border-b-2 border-black"><div class="flex justify-between items-end"><div><span class="block text-sm font-bold text-mono-800">Yakacak Yardımı</span></div><span class="text-lg font-serif text-black" id="resFuel">1.710,00 ₺</span></div></div>
+                            <div class="py-5 border-b-2 border-black"><div class="flex justify-between items-end"><div><span class="block text-sm font-bold text-mono-800">Yakacak Yardımı</span></div><span class="text-lg font-serif text-black" id="resFuel">1.936,00 ₺</span></div></div>
                             <div class="pt-6 flex justify-between items-center"><span class="text-xs font-bold uppercase text-mono-500">Toplam Brüt</span><span class="text-xl font-serif font-bold text-black" id="resTotalIncome">0,00 ₺</span></div>
                         </div>
                         <div class="w-full md:w-2/5 p-8 bg-mono-50/50 flex flex-col justify-center relative overflow-hidden">
@@ -316,10 +317,18 @@
             if (isNaN(hourlyRate) || isNaN(seniority)) return;
 
             const baseSalary = hourlyRate * 225;
+            // Kıdem yılı max 11 yıl olarak baz alınır.
             const calcYear = seniority > 11 ? 11 : seniority;
-            const bonusDays = 70 + (calcYear * 4);
+            
+            // GÜNCELLEME: İkramiye başlangıç 74 gün oldu.
+            // 0 yıl = 74 gün, her yıl +4 artar. Max (11.yıl) = 74 + 44 = 118 gün.
+            const bonusDays = 74 + (calcYear * 4);
+            
             const bonusAmount = (bonusDays * hourlyRate * 7.5) / 12;
-            const fuelAid = 1710;
+            
+            // GÜNCELLEME: Yakacak yardımı 1936 TL oldu.
+            const fuelAid = 1936;
+            
             const totalBenefits = bonusAmount + fuelAid;
             const totalIncome = baseSalary + totalBenefits;
 
